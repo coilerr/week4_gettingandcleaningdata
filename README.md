@@ -6,4 +6,4 @@ final_dataset.txt is the data set containing the summary data set containing the
 
 readme.md
 
-
+run_analysis.R is the script to create the data set presented above

@@ -1,4 +1,3 @@
-
 library(tidyverse)
 library(data.table)
 library(stringr)
@@ -13,23 +12,28 @@ names(train_ds)<-unlist(feats[,2]) #we name the two datasets using the feature f
 names(test_ds)<-unlist(feats[,2])
 y_train <-fread("UCI HAR Dataset/train/y_train.txt")#labels for the rows of the trian set
 y_test <- fread("UCI HAR Dataset/test/y_test.txt")#labels for the rows of the test set
-train_ds<-bind_cols(train_ds,y_train)#we attach the activity infos to the train_ds
-train_ds <- train_ds[,c(562,1:561)]
-test_ds <- bind_cols(test_ds,y_test)
-test_ds <- test_ds[,c(562,1:561)]#we rearrange the cols to have the activity label as a first row
+subject_train <- fread("UCI HAR Dataset/train/subject_train.txt")
+subject_test <- fread("week4-clean-data-set/UCI HAR Dataset/test/subject_test.txt")
+train_ds<-bind_cols(train_ds,y_train,subject_train)#we attach the activity infos to the train_ds
+train_ds <- train_ds[,c(562,563,1:561)]
+test_ds <- bind_cols(test_ds,y_test,subject_test)
+test_ds <- test_ds[,c(562,563,1:561)]#we rearrange the cols to have the activity label as a first row
 traintest<-bind_rows(test_ds,train_ds)#we merge the 2 data sets
+names(traintest)[1]<- "activity" #we change the name of the activity column 
+names(traintest)[2]<- "subjects" #we change the name of the activity column 
+print(head(traintest))
 traintest_meanstd<-traintest%>%#we select only the cols with a mean or a standard deviation and the activity column
-  select(matches('V1|mean()|std()',ignore.case = FALSE))
+  select(matches('activity|subjects|mean()|std()',ignore.case = FALSE))
 
 act_labs <- fread("UCI HAR Dataset/activity_labels.txt")#the labels for the activities
-names(traintest_meanstd)[1]<- "activity" #we change the name of the activity column 
 traintest_meanstd$activity <- as.factor(traintest_meanstd$activity) #transform the activity col in a factor
-levels(traintest_meanstd$activity)<-act_labs$V2 #we replace the levels of the activity variable
+levels(traintest_meanstd$activity)<-tolower(act_labs$V2) #we replace the levels of the activity variable
 names(traintest_meanstd)<-names(traintest_meanstd)%>% #we remove the parenthesis, the dashes are replace by an underscore and all the col names are set to lower cases
   str_remove(pattern = "\\(\\)")%>%
   str_replace_all(pattern = "\\-",replacement = "_")%>%
   tolower()
-
 traintest_meanstd_sum<- traintest_meanstd %>% #we group by activity and summarize all the columns
-  group_by(activity)%>% 
+  group_by(activity,subjects)%>% 
   summarise_all(mean)
+fwrite(traintest_meanstd_sum,"final_dataset.txt",sep = " ")
+
